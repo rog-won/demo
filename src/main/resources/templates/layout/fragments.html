@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<header th:fragment="header">
+    <h1 th:text="${appName}">My Web App</h1>
+    <hr/>
+</header>
+
+<footer th:fragment="footer">
+    <hr/>
+    <p th:text="${footerText}">기본 푸터</p>
+</footer>
+
+</body>
+</html>

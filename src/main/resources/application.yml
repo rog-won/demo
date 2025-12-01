@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: rokdemo
+
+  thymeleaf:
+    cache: false
+
+  mvc:
+    view:
+      prefix: classpath:/templates/
+      suffix: .html
+
+server:
+  port: 8087

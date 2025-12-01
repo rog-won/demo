@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:fragment="layout(content)"> <!-- ★ layout(content) 프래그먼트 정의 -->
+
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title} ?: ${appName}">My Web App</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header th:replace="layout/fragments :: header"></header>
+
+<main class="container">
+    <!-- 각 페이지에서 넘겨준 content fragment를 여기에 끼움 -->
+    <th:block th:replace="${content}"></th:block>
+</main>
+
+<footer th:replace="layout/fragments :: footer"></footer>
+</body>
+</html>

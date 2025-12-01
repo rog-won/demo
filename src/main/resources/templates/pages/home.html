@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::body})}">
+<!--
+  이 html 전체를 layout/base.html 의 layout(content) 프래그먼트로 교체하되,
+  아래 body 부분을 content 로 넘긴다는 의미
+-->
+<body>
+<h2 th:text="${title}">홈</h2>
+<p th:text="${message}">메시지</p>
+</body>
+</html>
