@@ -1,10 +1,11 @@
 package com.example.rokdemo.toss;
 
-import com.ddfactory.nc_homepage.payment.toss.config.TossPaymentConfig;
-import com.ddfactory.nc_homepage.payment.toss.dto.*;
+import com.example.rokdemo.toss.config.TossPaymentConfig;
+import com.example.rokdemo.toss.dto.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.RequiredArgsConstructor;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -106,21 +107,25 @@ public class TossPaymentService {
      * HTTP 응답 처리 공통 로직
      */
     private <T> T executeRequest(HttpRequestBase request, Class<T> responseType, String operationType) throws TossPaymentException {
-        try {
-            setCommonHeaders(request);
-            
-            CloseableHttpResponse response = httpClient.execute(request);
-            String responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+        setCommonHeaders(request);
+
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            HttpEntity entity = response.getEntity();
+            String responseBody = entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
+
             int statusCode = response.getStatusLine().getStatusCode();
-            
             logger.debug("토스페이먼츠 {} 응답 - HTTP {}: {}", operationType, statusCode, responseBody);
-            
-            if (statusCode != 200) {
+
+            if (statusCode < 200 || statusCode >= 300) {
                 handleErrorResponse(responseBody, statusCode, operationType);
             }
-            
+
+            if (responseType == Void.class || responseBody.isEmpty()) {
+                return null;
+            }
+
             return gson.fromJson(responseBody, responseType);
-            
+
         } catch (TossPaymentException e) {
             throw e;
         } catch (Exception e) {
@@ -138,9 +143,7 @@ public class TossPaymentService {
             String errorCode = errorJson.has("code") ? errorJson.get("code").getAsString() : null;
             String errorMessage = errorJson.has("message") ? errorJson.get("message").getAsString() : null;
             
-            String finalMessage = errorMessage != null 
-                ? errorMessage 
-                : operationType + " 실패 (HTTP " + statusCode + ")";
+            String finalMessage = errorMessage != null ? errorMessage : operationType + " 실패 (HTTP " + statusCode + ")";
             
             logger.warn("토스페이먼츠 {} 실패 - 코드: {}, 메시지: {}", operationType, errorCode, finalMessage);
             
@@ -178,13 +181,16 @@ public class TossPaymentService {
         
         TossPaymentResponse paymentResponse = executeRequest(httpPost, TossPaymentResponse.class, "결제 승인");
         
-        // 결제 상태 확인
+        // 응답 null 체크
+        if (paymentResponse == null) {
+            throw new TossPaymentException("결제 승인 응답이 비어있습니다.");
+        }
+
+        // 결제 상태 확인 (에러 코드가 있으면 실패)
         if (paymentResponse.getCode() != null) {
             throw new TossPaymentException(
                 paymentResponse.getCode(),
-                paymentResponse.getMessage() != null 
-                    ? paymentResponse.getMessage() 
-                    : "결제 승인 실패: " + paymentResponse.getCode()
+                paymentResponse.getMessage() != null ? paymentResponse.getMessage() : "결제 승인 실패: " + paymentResponse.getCode()
             );
         }
         
@@ -234,6 +240,11 @@ public class TossPaymentService {
         
         TossCancelResponse cancelResponse = executeRequest(httpPost, TossCancelResponse.class, "결제 취소");
         
+        // 응답 null 체크
+        if (cancelResponse == null) {
+            throw new TossPaymentException("결제 취소 응답이 비어있습니다.");
+        }
+        
         logger.info("토스페이먼츠 결제 취소 성공 - paymentKey: {}, status: {}", paymentKey, cancelResponse.getStatus());
         
         return cancelResponse;
@@ -253,13 +264,16 @@ public class TossPaymentService {
         
         TossPaymentResponse paymentResponse = executeRequest(httpGet, TossPaymentResponse.class, "결제 조회");
         
-        // 결제 상태 확인
+        // 응답 null 체크
+        if (paymentResponse == null) {
+            throw new TossPaymentException("결제 조회 응답이 비어있습니다.");
+        }
+        
+        // 결제 상태 확인 (에러 코드가 있으면 실패)
         if (paymentResponse.getCode() != null) {
             throw new TossPaymentException(
                 paymentResponse.getCode(),
-                paymentResponse.getMessage() != null 
-                    ? paymentResponse.getMessage() 
-                    : "결제 조회 실패: " + paymentResponse.getCode()
+                paymentResponse.getMessage() != null ? paymentResponse.getMessage() : "결제 조회 실패: " + paymentResponse.getCode()
             );
         }
         
