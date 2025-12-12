@@ -27,7 +27,6 @@ import java.util.Base64;
 
 /**
  * 토스페이먼츠 결제 공통 서비스
- * 여러 모듈에서 재사용 가능한 결제 로직 제공
  */
 @Service
 @RequiredArgsConstructor
@@ -36,9 +35,10 @@ public class TossPaymentService {
     private static final Logger logger = LoggerFactory.getLogger(TossPaymentService.class);
     private static final Gson gson = new Gson();
     
-    // HTTP 요청 타임아웃 설정 (밀리초)
+    // HTTP 요청 타임아웃 설정
     private static final int CONNECTION_TIMEOUT = 5000;
     private static final int SOCKET_TIMEOUT = 30000;
+    private static final int CONNECTION_REQUEST_TIMEOUT = 5000;
     
     private final TossPaymentConfig config;
     
@@ -46,18 +46,18 @@ public class TossPaymentService {
     private PoolingHttpClientConnectionManager connectionManager;
     
     /**
-     * HttpClient 초기화 (재사용을 위한 커넥션 풀 설정)
+     * HttpClient 초기화
      */
     @PostConstruct
     public void init() {
         connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(100);  // 최대 커넥션 수
-        connectionManager.setDefaultMaxPerRoute(20);  // 호스트당 최대 커넥션 수
-        
+        connectionManager.setMaxTotal(100);  // 최대 커넥션 수 : 트레픽 많으면 100~200 사이로 고려하면 됨
+        connectionManager.setDefaultMaxPerRoute(20);  // 호스트당 최대 커넥션 수 : 이것도 트레픽 많으면 20~50 사이로 고려하면 됨
+
         RequestConfig requestConfig = RequestConfig.custom()
             .setConnectTimeout(CONNECTION_TIMEOUT)
             .setSocketTimeout(SOCKET_TIMEOUT)
-            .setConnectionRequestTimeout(CONNECTION_TIMEOUT)
+            .setConnectionRequestTimeout(CONNECTION_REQUEST_TIMEOUT)
             .build();
         
         httpClient = HttpClients.custom()
@@ -158,20 +158,20 @@ public class TossPaymentService {
     
     /**
      * 결제 승인 처리
-     * @param request 결제 승인 요청 정보
+     * @param req 결제 승인 요청 정보
      * @return 결제 승인 결과
      * @throws TossPaymentException 결제 승인 실패 시
      */
-    public TossPaymentResponse confirmPayment(TossPaymentRequest request) throws TossPaymentException {
-        logger.info("토스페이먼츠 결제 승인 요청 - orderId: {}, amount: {}", request.getOrderId(), request.getAmount());
+    public TossPaymentResponse confirmPayment(TossPaymentRequest req) throws TossPaymentException {
+        logger.info("토스페이먼츠 결제 승인 요청 - orderId: {}, amount: {}", req.getOrderId(), req.getAmount());
         
         HttpPost httpPost = new HttpPost(config.getConfirmUrl());
         
         // 요청 Body 생성
         JsonObject requestBody = new JsonObject();
-        requestBody.addProperty("paymentKey", request.getPaymentKey());
-        requestBody.addProperty("orderId", request.getOrderId());
-        requestBody.addProperty("amount", request.getAmount());
+        requestBody.addProperty("paymentKey", req.getPaymentKey());
+        requestBody.addProperty("orderId", req.getOrderId());
+        requestBody.addProperty("amount", req.getAmount());
         
         try {
             httpPost.setEntity(new StringEntity(requestBody.toString(), StandardCharsets.UTF_8));
@@ -203,32 +203,32 @@ public class TossPaymentService {
     /**
      * 결제 취소 처리
      * @param paymentKey 결제 키
-     * @param request 취소 요청 정보
+     * @param req 취소 요청 정보
      * @return 취소 결과
      * @throws TossPaymentException 결제 취소 실패 시
      */
-    public TossCancelResponse cancelPayment(String paymentKey, TossCancelRequest request) throws TossPaymentException {
+    public TossCancelResponse cancelPayment(String paymentKey, TossCancelRequest req) throws TossPaymentException {
         logger.info("토스페이먼츠 결제 취소 요청 - paymentKey: {}, cancelReason: {}, cancelAmount: {}", 
-            paymentKey, request.getCancelReason(), request.getCancelAmount());
+            paymentKey, req.getCancelReason(), req.getCancelAmount());
         
         String cancelUrl = config.getCancelUrl().replace("{paymentKey}", paymentKey);
         HttpPost httpPost = new HttpPost(cancelUrl);
         
         // 요청 Body 생성
         JsonObject requestBody = new JsonObject();
-        requestBody.addProperty("cancelReason", request.getCancelReason());
+        requestBody.addProperty("cancelReason", req.getCancelReason());
         
         // 취소 금액이 지정된 경우 (부분 취소)
-        if (request.getCancelAmount() != null) {
-            requestBody.addProperty("cancelAmount", request.getCancelAmount());
+        if (req.getCancelAmount() != null) {
+            requestBody.addProperty("cancelAmount", req.getCancelAmount());
         }
         
         // 환불 계좌 정보가 있는 경우 (가상계좌 결제 취소 시)
-        if (request.getRefundReceiveAccount() != null) {
+        if (req.getRefundReceiveAccount() != null) {
             JsonObject account = new JsonObject();
-            account.addProperty("bank", request.getRefundReceiveAccount().getBank());
-            account.addProperty("accountNumber", request.getRefundReceiveAccount().getAccountNumber());
-            account.addProperty("holderName", request.getRefundReceiveAccount().getHolderName());
+            account.addProperty("bank", req.getRefundReceiveAccount().getBank());
+            account.addProperty("accountNumber", req.getRefundReceiveAccount().getAccountNumber());
+            account.addProperty("holderName", req.getRefundReceiveAccount().getHolderName());
             requestBody.add("refundReceiveAccount", account);
         }
         

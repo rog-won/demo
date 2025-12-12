@@ -12,9 +12,9 @@ public enum EasyPayProvider {
     NAVERPAY("NAVERPAY", "네이버페이"),
     TOSSPAY("TOSSPAY", "토스페이"),
     SAMSUNGPAY("SAMSUNGPAY", "삼성페이"),
-    LPAY("LPAY", "LG페이"),
+    LPAY("LPAY", "엘페이"),
     PAYCO("PAYCO", "페이코"),
-    SSGPAY("SSGPAY", "SSG페이"),
+    SSG("SSG", "SSG페이"),
     APPLEPAY("APPLEPAY", "애플페이");
 
     private final String code;
