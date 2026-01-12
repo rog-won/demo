@@ -1,7 +1,8 @@
 package com.example.rokdemo.toss;
 
-import com.example.rokdemo.toss.config.TossPaymentConfig;
-import com.example.rokdemo.toss.dto.*;
+import com.ddfactory.nc_homepage.payment.toss.config.TossPaymentConfig;
+import com.ddfactory.nc_homepage.payment.toss.dto.*;
+import com.example.rokdemo.toss.dto.TossBillingRequest;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.RequiredArgsConstructor;
@@ -283,26 +284,116 @@ public class TossPaymentService {
     }
     
     /**
+     * 빌링 승인 처리
+     * NC 다이노스 페이에서 등록된 빌링키로 결제를 진행.
+     * 
+     * @param req 빌링 결제 요청 정보
+     * @return 결제 승인 결과
+     * @throws TossPaymentException 빌링 결제 실패 시
+     */
+    public TossPaymentResponse billingPayment(TossBillingRequest req) throws TossPaymentException {
+        logger.info("토스페이먼츠 빌링 결제 요청 - billingKey: {}, customerKey: {}, orderId: {}, amount: {}",
+                maskBillingKey(req.getBillingKey()),
+                req.getCustomerKey(),
+                req.getOrderId(),
+                req.getAmount());
+        // 필수 파라미터 검증
+        if (req.getBillingKey() == null || req.getBillingKey().isEmpty()) {
+            throw new TossPaymentException("INVALID_BILLING_KEY", "빌링키가 없습니다.");
+        }
+        if (req.getCustomerKey() == null || req.getCustomerKey().isEmpty()) {
+            throw new TossPaymentException("INVALID_CUSTOMER_KEY", "고객 식별자가 없습니다.");
+        }
+        if (req.getAmount() == null || req.getAmount() <= 0) {
+            throw new TossPaymentException("INVALID_AMOUNT", "결제 금액이 올바르지 않습니다.");
+        }
+        if (req.getOrderId() == null || req.getOrderId().isEmpty()) {
+            throw new TossPaymentException("INVALID_ORDER_ID", "주문번호가 없습니다.");
+        }
+        if (req.getOrderName() == null || req.getOrderName().isEmpty()) {
+            throw new TossPaymentException("INVALID_ORDER_NAME", "상품명이 없습니다.");
+        }
+        
+        // 빌링 API URL 생성
+        String billingUrl = config.getBillingUrl().replace("{billingKey}", req.getBillingKey());
+        HttpPost httpPost = new HttpPost(billingUrl);
+        
+        // 요청 Body 생성
+        JsonObject requestBody = new JsonObject();
+        requestBody.addProperty("customerKey", req.getCustomerKey());
+        requestBody.addProperty("amount", req.getAmount());
+        requestBody.addProperty("orderId", req.getOrderId());
+        requestBody.addProperty("orderName", req.getOrderName());
+        
+        // 선택 파라미터 추가
+        if (req.getCustomerEmail() != null && !req.getCustomerEmail().isEmpty()) {
+            requestBody.addProperty("customerEmail", req.getCustomerEmail());
+        }
+        if (req.getCustomerName() != null && !req.getCustomerName().isEmpty()) {
+            requestBody.addProperty("customerName", req.getCustomerName());
+        }
+        if (req.getCustomerMobilePhone() != null && !req.getCustomerMobilePhone().isEmpty()) {
+            requestBody.addProperty("customerMobilePhone", req.getCustomerMobilePhone());
+        }
+        if (req.getTaxFreeAmount() != null) {
+            requestBody.addProperty("taxFreeAmount", req.getTaxFreeAmount());
+        }
+        if (req.getCardInstallmentPlan() != null && req.getCardInstallmentPlan() > 0) {
+            requestBody.addProperty("cardInstallmentPlan", req.getCardInstallmentPlan());
+        }
+        
+        try {
+            httpPost.setEntity(new StringEntity(requestBody.toString(), StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new TossPaymentException("REQUEST_BUILD_ERROR", "요청 데이터 생성 실패", e);
+        }
+        
+        logger.debug("토스페이먼츠 빌링 요청 Body: {}", requestBody);
+        
+        TossPaymentResponse paymentResponse = executeRequest(httpPost, TossPaymentResponse.class, "빌링 결제");
+        
+        // 응답 null 체크
+        if (paymentResponse == null) {
+            throw new TossPaymentException("EMPTY_RESPONSE", "빌링 결제 응답이 비어있습니다.");
+        }
+        
+        // 결제 상태 확인 (에러 코드가 있으면 실패)
+        if (paymentResponse.getCode() != null) {
+            throw new TossPaymentException(
+                paymentResponse.getCode(),
+                paymentResponse.getMessage() != null ? paymentResponse.getMessage() : "빌링 결제 실패: " + paymentResponse.getCode()
+            );
+        }
+        
+        // 결제 완료 상태가 아니면 실패 처리
+        if (!"DONE".equals(paymentResponse.getStatus())) {
+            throw new TossPaymentException(
+                "PAYMENT_NOT_DONE",
+                "빌링 결제가 완료되지 않았습니다. 상태: " + paymentResponse.getStatus()
+            );
+        }
+        
+        logger.info("토스페이먼츠 빌링 결제 성공 - paymentKey: {}, orderId: {}, status: {}", 
+            paymentResponse.getPaymentKey(), paymentResponse.getOrderId(), paymentResponse.getStatus());
+        
+        return paymentResponse;
+    }
+    
+    /**
+     * 빌링키 마스킹 (로그용)
+     */
+    private String maskBillingKey(String billingKey) {
+        if (billingKey == null || billingKey.length() < 10) {
+            return "***";
+        }
+        return billingKey.substring(0, 5) + "***" + billingKey.substring(billingKey.length() - 5);
+    }
+    
+    /**
      * 클라이언트 키 조회 (JSP에서 사용)
      * @return 클라이언트 키
      */
     public String getClientKey() {
         return config.getClientKey();
-    }
-    
-    /**
-     * 성공 URL 조회
-     * @return 성공 URL
-     */
-    public String getSuccessUrl() {
-        return config.getSuccessUrl();
-    }
-    
-    /**
-     * 실패 URL 조회
-     * @return 실패 URL
-     */
-    public String getFailUrl() {
-        return config.getFailUrl();
     }
 }

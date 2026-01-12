@@ -39,13 +39,8 @@ public class TossPaymentConfig {
     private String lookupUrl = "https://api.tosspayments.com/v1/payments/{paymentKey}";
     
     /**
-     * 결제 성공 후 리다이렉트 URL
+     * 빌링(자동결제) 승인 API URL
      */
-    private String successUrl;
-    
-    /**
-     * 결제 실패 후 리다이렉트 URL
-     */
-    private String failUrl;
+    private String billingUrl = "https://api.tosspayments.com/v1/billing/{billingKey}";
 }
 
