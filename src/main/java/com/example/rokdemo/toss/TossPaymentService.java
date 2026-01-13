@@ -1,7 +1,7 @@
 package com.example.rokdemo.toss;
 
-import com.ddfactory.nc_homepage.payment.toss.config.TossPaymentConfig;
-import com.ddfactory.nc_homepage.payment.toss.dto.*;
+import com.example.rokdemo.toss.config.TossPaymentConfig;
+import com.example.rokdemo.toss.dto.*;
 import com.example.rokdemo.toss.dto.TossBillingRequest;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
