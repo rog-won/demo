@@ -1,6 +1,11 @@
 package com.example.rokdemo.aspect;
 
 import com.example.rokdemo.annotation.ExcelDownloadLog;
+import com.example.rokdemo.common.Const;
+import com.example.rokdemo.dto.AdminLogVO;
+import com.example.rokdemo.dto.AdminVO;
+import com.example.rokdemo.util.WebUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -9,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * 엑셀 다운로드 로깅을 위한 AOP Aspect
@@ -53,14 +57,14 @@ public class ExcelDownloadLogAspect {
             
             // 성공 로그 기록
             logVO.setSuccess(true);
-            accountService.insertExcelDownloadLog(logVO);
+//            accountService.insertExcelDownloadLog(logVO);
             
             return result;
         } catch (Exception e) {
             // 실패 로그 기록
             logVO.setSuccess(false);
             logVO.setErrorMessage(e.getMessage());
-            accountService.insertExcelDownloadLog(logVO);
+//            accountService.insertExcelDownloadLog(logVO);
             
             throw e;
         }
