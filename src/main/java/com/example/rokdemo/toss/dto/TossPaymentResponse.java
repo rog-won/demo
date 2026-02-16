@@ -2,7 +2,6 @@ package com.example.rokdemo.toss.dto;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +24,11 @@ public class TossPaymentResponse {
      * 주문명
      */
     private String orderName;
+    
+    /**
+     * 결제 타입 (NORMAL: 일반결제, BILLING: 자동결제, BRANDPAY: 브랜드페이)
+     */
+    private String type;
     
     /**
      * 결제 상태 (DONE, CANCELED, PARTIAL_CANCELED, WAITING_FOR_DEPOSIT 등)

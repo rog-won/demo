@@ -2,7 +2,6 @@ package com.example.rokdemo.toss.dto;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.Data;
-
 import java.util.List;
 
 /**

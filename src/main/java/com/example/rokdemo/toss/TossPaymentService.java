@@ -2,7 +2,6 @@ package com.example.rokdemo.toss;
 
 import com.example.rokdemo.toss.config.TossPaymentConfig;
 import com.example.rokdemo.toss.dto.*;
-import com.example.rokdemo.toss.dto.TossBillingRequest;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.RequiredArgsConstructor;
@@ -395,5 +394,118 @@ public class TossPaymentService {
      */
     public String getClientKey() {
         return config.getClientKey();
+    }
+    
+    /**
+     * 결제 위젯 variantKey
+     * @return variantKey
+     */
+    public String getVariantKey() {
+        return config.getVariantKey();
+    }
+    
+    /**
+     * 브랜드페이 리다이렉트 URL 조회 (JSP에서 사용)
+     * @return 브랜드페이 리다이렉트 URL
+     */
+    public String getBrandPayRedirectUrl() {
+        return config.getBrandPayRedirectUrl();
+    }
+    
+    /**
+     * 브랜드페이 Access Token 발급
+     * @param code 토스페이먼츠에서 발급한 인증 코드
+     * @param customerKey 고객 식별자
+     * @return Access Token 정보
+     * @throws TossPaymentException Access Token 발급 실패 시
+     */
+    public TossBrandPayTokenResponse issueBrandPayAccessToken(String code, String customerKey) throws TossPaymentException {
+        logger.info("토스페이먼츠 브랜드페이 Access Token 발급 요청 - customerKey: {}", customerKey);
+        
+        // 필수 파라미터 검증
+        if (code == null || code.isEmpty()) {
+            throw new TossPaymentException("INVALID_CODE", "인증 코드가 없습니다.");
+        }
+        if (customerKey == null || customerKey.isEmpty()) {
+            throw new TossPaymentException("INVALID_CUSTOMER_KEY", "고객 식별자가 없습니다.");
+        }
+        
+        HttpPost httpPost = new HttpPost(config.getBrandPayTokenUrl());
+        
+        // 요청 Body 생성
+        JsonObject requestBody = new JsonObject();
+        requestBody.addProperty("grantType", "AuthorizationCode");
+        requestBody.addProperty("code", code);
+        requestBody.addProperty("customerKey", customerKey);
+        
+        try {
+            httpPost.setEntity(new StringEntity(requestBody.toString(), StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new TossPaymentException("REQUEST_BUILD_ERROR", "요청 데이터 생성 실패", e);
+        }
+        
+        logger.debug("토스페이먼츠 브랜드페이 Access Token 요청 Body: {}", requestBody);
+        
+        TossBrandPayTokenResponse tokenResponse = executeRequest(httpPost, TossBrandPayTokenResponse.class, "브랜드페이 Access Token 발급");
+        
+        // 응답 null 체크
+        if (tokenResponse == null) {
+            throw new TossPaymentException("EMPTY_RESPONSE", "브랜드페이 Access Token 응답이 비어있습니다.");
+        }
+        
+        // 에러 응답 체크
+        if (tokenResponse.getCode() != null) {
+            throw new TossPaymentException(
+                tokenResponse.getCode(),
+                tokenResponse.getMessage() != null ? tokenResponse.getMessage() : "브랜드페이 Access Token 발급 실패: " + tokenResponse.getCode()
+            );
+        }
+        
+        // Access Token 존재 확인
+        if (tokenResponse.getAccessToken() == null || tokenResponse.getAccessToken().isEmpty()) {
+            throw new TossPaymentException("NO_ACCESS_TOKEN", "Access Token이 없습니다.");
+        }
+        
+        logger.info("토스페이먼츠 브랜드페이 Access Token 발급 성공 - customerKey: {}", customerKey);
+        
+        return tokenResponse;
+    }
+    
+    /**
+     * 브랜드페이 등록된 결제수단 조회
+     * @param customerKey 고객 식별자
+     * @return 등록된 결제수단 목록
+     * @throws TossPaymentException 조회 실패 시
+     */
+    public TossBrandPayMethodResponse getBrandPayMethods(String customerKey) throws TossPaymentException {
+        logger.info("토스페이먼츠 브랜드페이 결제수단 조회 요청 - customerKey: {}", customerKey);
+        
+        // 필수 파라미터 검증
+        if (customerKey == null || customerKey.isEmpty()) {
+            throw new TossPaymentException("INVALID_CUSTOMER_KEY", "고객 식별자가 없습니다.");
+        }
+        
+        String url = config.getBrandPayMethodUrl() + "?customerKey=" + customerKey;
+        HttpGet httpGet = new HttpGet(url);
+        
+        TossBrandPayMethodResponse methodResponse = executeRequest(httpGet, TossBrandPayMethodResponse.class, "브랜드페이 결제수단 조회");
+        
+        // 응답 null 체크
+        if (methodResponse == null) {
+            throw new TossPaymentException("EMPTY_RESPONSE", "브랜드페이 결제수단 조회 응답이 비어있습니다.");
+        }
+        
+        // 에러 응답 체크
+        if (methodResponse.getCode() != null) {
+            throw new TossPaymentException(
+                methodResponse.getCode(),
+                methodResponse.getMessage() != null ? methodResponse.getMessage() : "브랜드페이 결제수단 조회 실패: " + methodResponse.getCode()
+            );
+        }
+        
+        logger.info("토스페이먼츠 브랜드페이 결제수단 조회 성공 - customerKey: {}, 등록된 결제수단: {}개", 
+            customerKey, methodResponse.getMethods() != null ? methodResponse.getMethods().size() : 0);
+        
+        return methodResponse;
     }
 }
