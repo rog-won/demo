@@ -89,11 +89,6 @@ public class TossPaymentResponse {
     private TossEasyPayInfo easyPay;
     
     /**
-     * 계좌이체 정보 (계좌이체인 경우)
-     */
-    private TossTransferInfo transfer;
-    
-    /**
      * 취소 이력
      */
     private List<TossCancelHistory> cancels;
@@ -179,18 +174,6 @@ public class TossPaymentResponse {
         
         @SerializedName("discountAmount")
         private Integer discountAmount;  // 할인 금액
-    }
-    
-    /**
-     * 계좌이체 정보 DTO
-     */
-    @Data
-    public static class TossTransferInfo {
-        @SerializedName("bankCode")
-        private String bankCode;  // 은행 코드
-        
-        @SerializedName("settlementStatus")
-        private String settlementStatus;  // 정산 상태 (INCOMPLETE, COMPLETE)
     }
     
     /**
