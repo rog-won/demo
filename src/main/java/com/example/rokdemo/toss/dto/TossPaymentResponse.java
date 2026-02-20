@@ -84,7 +84,7 @@ public class TossPaymentResponse {
     private TossVirtualAccountInfo virtualAccount;
     
     /**
-     * 간편결제 정보 (간편결제인 경우)
+     * 간편결제 정보 (간편결제인 경우) ????
      */
     private TossEasyPayInfo easyPay;
     
