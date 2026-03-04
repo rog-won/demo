@@ -11,8 +11,8 @@ spring:
       suffix: .html
 
 jwt:
-  secret: your-256-bit-secret-key-change-this-in-production-must-be-at-least-256-bits
-  expiration: 86400000 # 24시간 (밀리초)
+  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-must-be-at-least-256-bits}
+  expiration: ${JWT_EXPIRATION:86400000} # 24시간 (밀리초)
 
 server:
   port: 8087
