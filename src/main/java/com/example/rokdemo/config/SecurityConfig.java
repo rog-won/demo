@@ -85,6 +85,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/", "/error").permitAll()
                         .requestMatchers("/actuator/health").permitAll() // 헬스체크 엔드포인트
+                        .requestMatchers("/h2-console/**").permitAll() // H2 콘솔 (개발용)
                         .anyRequest().authenticated()
                 )
 
